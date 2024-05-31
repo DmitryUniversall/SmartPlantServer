@@ -34,4 +34,4 @@ class _MissingSentinel:
 
 
 MISSING: Any = _MissingSentinel()
-JsonObject: TypeAlias = Dict[str, Any]
+JsonDict: TypeAlias = Dict[str, Any]

@@ -11,7 +11,6 @@ from src.core.state import project_settings
 from src.core.utils.errors import supress_exception
 from src.main.db import AsyncDatabaseManagerST
 from src.main.exceptions.handlers import __handlers__
-from src.main.redis import StorageManagerST
 from src.main.routes import main_router
 
 
@@ -58,19 +57,14 @@ async def setup_error_handlers(app: FastAPI) -> None:
         app.add_exception_handler(handler.__exception_cls__, handler)
 
 
-async def setup_redis_storage_manager() -> None:
-    storage_manager = await StorageManagerST()  # await runs initialization
-    project_settings.STORAGE_MANAGER = storage_manager
-
-
 async def setup_database() -> None:
     db_manager = await AsyncDatabaseManagerST()  # await runs initialization
     project_settings.DB_MANAGER = db_manager
 
-    await setup_models(db_manager)
+    await setup_database_models(db_manager)
 
 
-async def setup_models(db_manager: 'AsyncDatabaseManagerST') -> None:
+async def setup_database_models(db_manager: 'AsyncDatabaseManagerST') -> None:
     async with db_manager.engine.begin() as conn:
         if project_settings.STATE != ProjectState.PRODUCTION:
             await conn.run_sync(BaseModel.metadata.drop_all)

@@ -3,10 +3,10 @@ from typing import Dict, Any, Union
 import jwt
 
 from src.core.state import project_settings
-from src.core.utils.types import JsonObject
+from src.core.utils.types import JsonDict
 
 
-def create_jwt_token(*, payload: JsonObject, exp: Union[int, float]) -> str:
+def create_jwt_token(*, payload: JsonDict, exp: Union[int, float]) -> str:
     encoded_jwt = jwt.encode(
         payload={
             "exp": exp,

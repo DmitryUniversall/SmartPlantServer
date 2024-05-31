@@ -9,5 +9,6 @@ from src.main.http.responses import ApplicationJsonResponse
 async def application_http_exception_handler(_: Request, error: ApplicationHTTPException, **__) -> ApplicationJsonResponse:
     return ApplicationJsonResponse(
         content=error.payload,
-        headers=error.headers
+        headers=error.headers,
+        status_code=error.status_code
     )

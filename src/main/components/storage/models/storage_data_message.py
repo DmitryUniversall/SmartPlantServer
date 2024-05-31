@@ -4,7 +4,7 @@ from enum import Enum
 from pydantic import Field
 
 from src.core.db import BaseSchema
-from src.core.utils.types import JsonObject
+from src.core.utils.types import JsonDict
 
 
 class DataMessageType(Enum):
@@ -18,4 +18,4 @@ class StorageDataMessage(BaseSchema):
     message_id: str
     target_device_id: int
     sender_device_id: int
-    data: JsonObject
+    data: JsonDict
