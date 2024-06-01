@@ -35,7 +35,7 @@ class RedisQueue(Generic[_schemaT]):
 
         new_size = await redis.rpush(self._key, data)  # type: ignore
         if new_size > self._max_size:
-            await redis.ltrim(self._key, self._max_size - self._overflow_buffer, -1)
+            await redis.ltrim(self._key, self._max_size - self._overflow_buffer, -1)  # type: ignore
 
     async def _write_json(self, data: JsonDict) -> None:
         await self._write_data(json.dumps(data))

@@ -37,10 +37,10 @@ class AuthSessionManagerRedisST(RedisClientManager):
         res = await self.get_active_refresh_uuid(user_id)
         return res == token_uuid
 
-    async def get_active_ttl(self, user_id: int) -> int:
+    async def get_access_ttl(self, user_id: int) -> int:
         redis = await self.get_redis()
-        return redis.ttl(self.get_active_access_key(user_id))
+        return await redis.ttl(self.get_active_access_key(user_id))  # type: ignore
 
     async def get_refresh_ttl(self, user_id: int) -> int:
         redis = await self.get_redis()
-        return redis.ttl(self.get_active_refresh_key(user_id))
+        return await redis.ttl(self.get_active_refresh_key(user_id))  # type: ignore

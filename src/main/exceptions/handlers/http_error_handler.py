@@ -15,7 +15,6 @@ async def http_exception_handler(_: Request, error: HTTPException, **__) -> Appl
             ok=200 <= error.status_code < 300,
             application_status_code=project_settings.APPLICATION_STATUS_CODES.NOT_SPECIFIED,
             message=str(error),
-            headers=error.headers,
             data={
                 "detail": error.detail
             }
