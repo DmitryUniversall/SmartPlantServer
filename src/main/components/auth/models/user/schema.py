@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from pydantic import Field
-
 from src.core.db import BaseSchema
 
 
@@ -13,7 +11,8 @@ from src.core.db import BaseSchema
 class UserPublic(BaseSchema):  # For public usage. Can be shown to other users
     id: int
     username: str
-    created_at: datetime = Field(default_factory=datetime.now)
+    is_device: bool
+    created_at: datetime
 
 
 class UserPrivate(UserPublic):  # For private usage. Can only be shown to user-owner

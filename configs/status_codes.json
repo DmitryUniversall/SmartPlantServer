@@ -31,6 +31,18 @@
             "UNPROCESSABLE_ENTITY": {
                 "application_status_code": 2003,
                 "message": "Unprocessable entity"
+            },
+            "TIME_OUT": {
+                "application_status_code": 2004,
+                "message": "Time out"
+            },
+            "BAD_REQUEST": {
+                "application_status_code": 2005,
+                "message": "Bad request"
+            },
+            "FORBIDDEN": {
+                "application_status_code": 2006,
+                "message": "Forbidden"
             }
         },
         "AUTH": {
@@ -71,10 +83,22 @@
                 "message": "Wrong authentication credentials"
             }
         },
-        "STORAGE": {
-            "STORAGE_OVERFLOW": {
+        "DEVICES": {
+            "INVALID_USER_OR_DEVICE": {
                 "application_status_code": 4001,
-                "message": "Storage overflow"
+                "message": "Invalid user or device"
+            },
+            "ALREADY_HAS_OWNER": {
+                "application_status_code": 4002,
+                "message": "This device already has owner"
+            },
+            "PAIR_REQUEST_ACCEPTED": {
+                "application_status_code": 4401,
+                "message": "Pair request accepted"
+            },
+            "PAIR_REQUEST_REJECTED": {
+                "application_status_code": 4402,
+                "message": "Pair request rejected"
             }
         }
     }

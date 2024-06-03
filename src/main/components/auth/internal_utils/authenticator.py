@@ -1,4 +1,5 @@
 import logging
+from http import HTTPStatus
 from typing import Tuple
 
 import jwt
@@ -34,21 +35,21 @@ class JWTAuthenticatorST(metaclass=SingletonMeta):
         try:
             return decode_jwt_token(token)
         except jwt.ExpiredSignatureError as error:
-            raise TokenExpiredHTTPException(status_code=401) from error
+            raise TokenExpiredHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
         except jwt.PyJWTError as error:
-            raise TokenInvalidHTTPException(status_code=401) from error
+            raise TokenInvalidHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
 
     def _decode_access_token(self, token: str) -> AccessTokenPayload:
         try:
             return AccessTokenPayload(**self._decode_token(token))
         except pydantic.ValidationError as error:
-            raise TokenInvalidHTTPException(status_code=401) from error
+            raise TokenInvalidHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
 
     def _decode_refresh_token(self, token: str) -> RefreshTokenPayload:
         try:
             return RefreshTokenPayload(**self._decode_token(token))
         except pydantic.ValidationError as error:
-            raise TokenInvalidHTTPException(status_code=401) from error
+            raise TokenInvalidHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
 
     async def _create_access_token(self, *, payload: AccessTokenPayload) -> str:
         await _session_manager.set_active_access_uuid(payload.user_id, payload.uuid)
@@ -61,9 +62,9 @@ class JWTAuthenticatorST(metaclass=SingletonMeta):
     async def _get_user_from_token_payload(self, payload: AuthTokenPayload) -> UserInternal:
         try:
             user_model = await _user_resource.get_by_id(payload.user_id)
-            return user_model.to_scheme(scheme_cls=UserInternal)
+            return user_model.to_schema(scheme_cls=UserInternal)
         except UserModel.DoesNotExist as error:
-            raise AuthUserUnknownHTTPException(status_code=401) from error
+            raise AuthUserUnknownHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
 
     async def _create_token_pair(self, user: UserInternal) -> AuthTokenPair:
         access_payload = AccessTokenPayload(user_id=user.id)  # type: ignore
@@ -77,9 +78,9 @@ class JWTAuthenticatorST(metaclass=SingletonMeta):
     async def _register_user(self, username: str, password: str, **field) -> UserInternal:
         try:
             user_model = await _user_resource.create_user(username, password, **field)
-            return user_model.to_scheme(scheme_cls=UserInternal)
+            return user_model.to_schema(scheme_cls=UserInternal)
         except UniqueConstraintFailed as error:
-            raise AuthUserAlreadyExists(status_code=409) from error
+            raise AuthUserAlreadyExists(status_code=HTTPStatus.CONFLICT) from error
 
     async def _login_user(self, username: str, password: str, **fields) -> UserInternal:
         try:
@@ -88,17 +89,17 @@ class JWTAuthenticatorST(metaclass=SingletonMeta):
                 password=_user_resource.hash_password(password),
                 **fields
             )
-            return user_model.to_scheme(scheme_cls=UserInternal)
+            return user_model.to_schema(scheme_cls=UserInternal)
         except UserModel.DoesNotExist as error:
-            raise WrongAuthCredentialsHTTPException(status_code=401) from error
+            raise WrongAuthCredentialsHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
 
     async def _validate_access_token(self, payload: AccessTokenPayload) -> None:
         if not (await _session_manager.is_active_access(payload.user_id, payload.uuid)):
-            raise TokenValidationFailed(status_code=401)
+            raise TokenValidationFailed(status_code=HTTPStatus.UNAUTHORIZED)
 
     async def _verify_refresh_token(self, payload: RefreshTokenPayload) -> None:
         if not (await _session_manager.is_active_refresh(payload.user_id, payload.uuid)):
-            raise TokenValidationFailed(status_code=401)
+            raise TokenValidationFailed(status_code=HTTPStatus.UNAUTHORIZED)
 
     async def authenticate(self, access_token: str) -> UserInternal:
         payload = self._decode_access_token(access_token)

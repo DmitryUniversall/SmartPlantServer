@@ -1,5 +1,6 @@
+import asyncio
 import json
-from typing import Optional, Callable, Iterable, TypeVar, Dict, Any, Union
+from typing import Optional, Callable, Iterable, TypeVar, Dict, Any, Union, List, Generic
 
 _T = TypeVar("_T")
 _KT = TypeVar("_KT")
@@ -24,7 +25,7 @@ class DotDict(Dict[str, Any]):
         Recursively searches for a key in the DotDict and returns its corresponding value.
 
     Notes:
-    - WARNING: All values that have type `dict` will be replaced with `DotDict`.
+    - WARNING: If replace_with_dotdict=True, all values that have type `dict` will be replaced with `DotDict`.
     """
 
     __delattr__ = dict.__delitem__  # type: ignore
@@ -107,6 +108,135 @@ class DotDict(Dict[str, Any]):
         """
 
         return find_in_dict(self, key)
+
+
+class AsyncObservableMixin(Generic[_KT, _VT]):
+    """
+    Mixin class that provides asynchronous waiting for key-value pairs to be added.
+    To use this mixin, parent class must implement `__getitem__` and `__setitem__` methods
+
+    Methods:
+        `__setitem__(key: _KT, value: _VT) -> None`
+            Sets the item in the dictionary and notifies any waiting futures.
+        `_notify(key: _KT, value: _VT) -> None`
+            Notifies the waiting futures that the value for the given key is available.
+        `_register_future(future: asyncio.Future, key: Optional[_KT] = None) -> None`
+            Registers a future to be notified when a value for the given key is available.
+        `wait_for(key: Optional[_KT] = None, filter_func: Optional[Callable[[_VT], bool]] = None, timeout: Optional[float] = None) -> _VT`
+            Waits for a value to be available in the dictionary for the given key and optionally filters it.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initializes an empty AsyncDict with no pending futures.
+        """
+
+        self._pending: Dict[_KT, asyncio.Future[_VT]] = {}
+        self._global_pending: List[asyncio.Future[_VT]] = []
+
+    def __contains__(self, item: _KT) -> bool:
+        return super().__contains__(item)  # type: ignore
+
+    def __getitem__(self, item: _KT) -> _VT:
+        return super().__getitem__(item)  # type: ignore
+
+    def __setitem__(self, key: _KT, value: _VT) -> None:
+        """
+        Sets the item in the dictionary and notifies any waiting futures.
+
+        :param key: `_KT`
+            The key to set in the dictionary.
+        :param value: `_VT`
+            The value to set for the given key.
+        """
+
+        super().__setitem__(key, value)  # type: ignore
+        self._notify(key, value)
+
+    def _notify(self, key: _KT, value: _VT) -> None:
+        """
+        Notifies the waiting futures that the value for the given key is available.
+
+        :param key: `_KT`
+            The key that has a new value.
+
+        :param value: `_VT`
+            The new value for the given key.
+        """
+
+        if key in self._pending:
+            future = self._pending.pop(key)
+            if not future.done():
+                future.set_result(value)
+
+        while self._global_pending:
+            future = self._global_pending.pop(0)
+            if not future.done():
+                future.set_result(value)
+
+    def _register_future(self, future: asyncio.Future, key: Optional[_KT] = None) -> None:
+        """
+        Registers a future to be notified when a value for the given key is available.
+
+        :param future: `asyncio.Future`
+            The future to register.
+
+        :param key: `Optional[_KT]`
+            The key to register the future for. If None, the future will be notified for any key.
+        """
+
+        if key is not None:
+            self._pending[key] = future
+        else:
+            self._global_pending.append(future)
+
+    async def wait_for(
+            self,
+            key: Optional[_KT] = None,
+            filter_func: Optional[Callable[[_VT], bool]] = None,
+            timeout: Optional[float] = None
+    ) -> _VT:
+        """
+        Waits for a value to be available in the dictionary for the given key and optionally filters it.
+
+        :param key: `Optional[_KT]`
+            The key to wait for. If None, waits for any key.
+
+        :param filter_func: `Optional[Callable[[_VT], bool]]`
+            An optional function to filter the values.
+
+        :param timeout: `Optional[float]`
+            The maximum time to wait for the value, in seconds. If None, waits indefinitely.
+
+        :return: `_VT`
+            The value for the given key if found and the filter function returns True, otherwise None.
+
+        :raises: `asyncio.TimeoutError`
+            If the timeout is reached before the value is available.
+        """
+
+        if key is not None and key in self:
+            value = self[key]
+            if filter_func is None or filter_func(value):
+                return value
+
+        future: asyncio.Future[_VT] = asyncio.Future()
+        self._register_future(future, key)
+
+        async with asyncio.timeout(timeout):
+            while True:
+                value = await future
+                if filter_func is None or filter_func(value):
+                    return value
+
+                future = asyncio.Future()
+                self._register_future(future, key)
+
+
+class AsyncObservableDict(AsyncObservableMixin, Dict[_KT, _VT]):
+    """
+    A dictionary class that supports asynchronous observation of key-value pairs.
+    """
 
 
 def find_in_dict(dict_: Dict[_KT, _VT], key: _KT) -> Optional[_VT]:

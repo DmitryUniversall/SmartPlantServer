@@ -21,5 +21,4 @@ class ApplicationResponsePayload(BaseSchema, Generic[_contentT]):
         if value is None:
             return None
 
-        # TODO: Is this safe?
         return value.model_dump() if isinstance(value, BaseSchema) else value  # type: ignore

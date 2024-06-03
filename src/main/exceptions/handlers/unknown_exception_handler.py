@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from src.core.exceptions import AbstractErrorHandler
 from src.core.state import project_settings
 from src.main.http.responses import ApplicationJsonResponse
@@ -12,5 +14,5 @@ async def unknown_exception_handler(*_, **__) -> ApplicationJsonResponse:
             data=None,
             **project_settings.APPLICATION_STATUS_CODES.GENERIC_ERRORS.INTERNAL_SERVER_ERROR,
         ),
-        status_code=500
+        status_code=HTTPStatus.INTERNAL_SERVER_ERROR
     )

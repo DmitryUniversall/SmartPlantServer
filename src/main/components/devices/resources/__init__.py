@@ -1,0 +1,1 @@
+from .device_part_resource import DevicePairResourceST

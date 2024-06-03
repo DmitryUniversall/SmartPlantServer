@@ -39,7 +39,7 @@ class BaseModel(Base, Generic[_schemaBaseT], metaclass=CustomModelMeta):  # type
             **model_kwargs
         )
 
-    def to_scheme(self, scheme_cls: Type[_schemaBaseT], **fields) -> _schemaBaseT:
+    def to_schema(self, scheme_cls: Type[_schemaBaseT], **fields) -> _schemaBaseT:
         return scheme_cls.parse_obj({
             **self.__dict__,
             **fields

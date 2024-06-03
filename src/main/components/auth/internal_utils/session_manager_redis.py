@@ -1,10 +1,11 @@
 from typing import Optional
 
 from src.core.state import project_settings
+from src.core.utils.singleton import SingletonMeta
 from src.main.redis import RedisClientManager
 
 
-class AuthSessionManagerRedisST(RedisClientManager):
+class AuthSessionManagerRedisST(RedisClientManager, metaclass=SingletonMeta):
     def __init__(self) -> None:
         super().__init__(db=project_settings.REDIS_DB_AUTH_SESSIONS)
 

@@ -3,11 +3,12 @@ from src.main.components.auth.models.auth_token_pair import AuthTokenPair
 from src.main.components.auth.models.user import UserPrivate
 
 
-class RegisterPayload(BaseSchema):
+class RegisterReqeustPayload(BaseSchema):
     username: str
     password: str
+    is_device: bool = False
 
 
-class RegisterResponse(BaseSchema):
+class RegisterResponsePayload(BaseSchema):
     user: UserPrivate
     tokens: AuthTokenPair

@@ -2,9 +2,9 @@ from src.core.db import BaseSchema
 from src.main.components.auth.models.auth_token_pair import AuthTokenPair
 
 
-class RefreshPayload(BaseSchema):
+class RefreshRequestPayload(BaseSchema):
     refresh_token: str
 
 
-class RefreshResponse(BaseSchema):
+class RefreshResponsePayload(BaseSchema):
     tokens: AuthTokenPair

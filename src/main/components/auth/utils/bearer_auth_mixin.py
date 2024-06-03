@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from typing import Optional
 
 from src.core.state import project_settings
@@ -14,14 +15,14 @@ class BearerAuthMixin:
         _auth_status_codes = project_settings.APPLICATION_STATUS_CODES.AUTH
 
         if not header:
-            raise AuthorizationNotSpecifiedHTTPException(status_code=403)
+            raise AuthorizationNotSpecifiedHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
         elif len(header.split(" ")) != 2:
-            raise AuthorizationInvalidHTTPException(status_code=403)
+            raise AuthorizationInvalidHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
         type_, access_token = header.split(" ")
         if type_.lower() != "bearer":
-            raise AuthorizationTypeUnknownHTTPException(status_code=403)
+            raise AuthorizationTypeUnknownHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
         elif not access_token:
-            raise TokenNotSpecifiedHTTPException(status_code=403)
+            raise TokenNotSpecifiedHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
         return access_token

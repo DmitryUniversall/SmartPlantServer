@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.requests import Request
@@ -17,7 +19,7 @@ async def http_validation_exception_handler(_: Request, exc: RequestValidationEr
             data={"detail": jsonable_encoder(exc.errors())},
             **project_settings.APPLICATION_STATUS_CODES.GENERIC_ERRORS.UNPROCESSABLE_ENTITY
         ),
-        status_code=422
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY
     )
 
 # @AbstractErrorHandler.as_error_handler(exception_cls=WebSocketRequestValidationError)  TODO
