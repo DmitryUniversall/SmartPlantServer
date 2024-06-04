@@ -12,7 +12,7 @@ class BaseSchema(BaseModel):
         return model(**self.model_dump())
 
     def to_json_dict(self, *args, **kwargs) -> Dict[str, Any]:
-        return json.loads(self.model_dump_json(*args, **kwargs))
+        return self.model_dump(mode="json", *args, **kwargs)
 
     def convert_to(self, schema_cls: Type[_T], **fields) -> _T:
         return schema_cls(**{

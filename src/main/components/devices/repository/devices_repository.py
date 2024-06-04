@@ -6,6 +6,7 @@ from src.main.components.auth.models.user import UserInternal
 from src.main.components.devices.exceptions import DeviceAlreadyHasOwnerHTTPException
 from src.main.components.devices.internal_utils.pair_request_manager import DevicePairRequestManagerST
 from src.main.components.devices.models.device_pair_request import DevicePairRequest
+from src.main.components.devices.models.device_pair import DevicePair
 from src.main.components.devices.resources.device_part_resource import DevicePairResourceST
 
 _pair_manager = DevicePairRequestManagerST()
@@ -41,3 +42,10 @@ class DevicesRepositoryST(metaclass=SingletonMeta):
 
         models = await _device_pair_resource.get_user_devices(user.id)
         return list(map(lambda x: x.to_schema(UserInternal), models))
+
+    async def get_pair_by_ids(self, user_id: int, device_id: int) -> DevicePair:
+        model = await _device_pair_resource.get_pair_by_ids(user_id, device_id)
+        return model.to_schema(DevicePair)
+
+    async def unpair(self, device_pair: DevicePair) -> None:
+        await _device_pair_resource.delete_by_id(device_pair.id)

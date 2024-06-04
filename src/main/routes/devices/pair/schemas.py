@@ -1,8 +1,6 @@
-from typing import Optional
-
 from src.core.db import BaseSchema
+from src.main.components.auth.models.user import UserPublic
 
 
-class PairDeviceRequestPayload(BaseSchema):
-    device_id: Optional[int] = None
-    device_username: Optional[str] = None
+class PairDeviceResponsePayload(BaseSchema):
+    device_user: UserPublic

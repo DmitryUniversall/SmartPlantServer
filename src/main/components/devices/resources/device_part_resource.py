@@ -3,6 +3,7 @@ from typing import Optional, List
 
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from src.main.components.auth.models.user import UserInternal, UserModel
 from src.main.components.devices.exceptions.generics import (
@@ -21,8 +22,11 @@ class DevicePairResourceST(BaseResource[DevicePairModel], metaclass=BaseResource
     __model_cls__ = DevicePairModel
 
     async def _fetch_by_id(self, session: AsyncSession, pair_id: int) -> Optional[DevicePairModel]:
-        # .options(joinedload(DevicePairModel.user), joinedload(DevicePairModel.device_user))
-        query = select(DevicePairModel).filter(DevicePairModel.id == pair_id)
+        query = (
+            select(DevicePairModel)
+            .options(joinedload(DevicePairModel.user), joinedload(DevicePairModel.device))
+            .filter(DevicePairModel.id == pair_id)
+        )
         result = await session.execute(query)
         return result.scalar()
 
@@ -33,16 +37,30 @@ class DevicePairResourceST(BaseResource[DevicePairModel], metaclass=BaseResource
         return result.scalars().first()
 
     async def _fetch_user_devices(self, session: AsyncSession, user_id: int) -> List[UserModel]:
-        subquery = select(DevicePairModel.device_id).where(DevicePairModel.user_id == user_id).subquery()
-        # FIXME: Argument 1 to "in_" of "SQLCoreOperations" has incompatible type "Subquery"; expected "Iterable[Any] | BindParameter[Any] | InElementRole"
-        stmt = select(UserModel).where(UserModel.id.in_(subquery))  # type: ignore
+        subquery = select(DevicePairModel.device_id).where(DevicePairModel.user_id == user_id)
+        stmt = select(UserModel).where(UserModel.id.in_(subquery))
         result = await session.execute(stmt)
         return list(result.scalars().all())
+
+    async def _fetch_pair_by_ids(self, session: AsyncSession, user_id: int, device_id: int) -> Optional[DevicePairModel]:
+        stmt = (
+            select(DevicePairModel)
+            .options(joinedload(DevicePairModel.user), joinedload(DevicePairModel.device))
+            .where(DevicePairModel.user_id == user_id, DevicePairModel.device_id == device_id)
+        )
+        result = await session.execute(stmt)
+        return result.scalar()
 
     async def _delete_pair_by_device_id(self, session: AsyncSession, device_id: int) -> None:
         stmt = delete(DevicePairModel).where(DevicePairModel.device_id == device_id)
         await session.execute(stmt)
         await session.commit()
+
+    async def get_pair_by_ids(self, user_id: int, device_id: int) -> DevicePairModel:
+        async with _db_manager.session() as session:
+            if (pair := await self._fetch_pair_by_ids(session, user_id, device_id)) is not None:
+                return pair
+            raise DevicePairModel.DoesNotExist(f"DevicePairModel with {user_id=}; {device_id=} does not exist")
 
     async def get_user_devices(self, user_id: int) -> List[UserModel]:
         async with _db_manager.session() as session:
@@ -54,10 +72,12 @@ class DevicePairResourceST(BaseResource[DevicePairModel], metaclass=BaseResource
 
     async def create_device_pair(self, user: UserInternal, device: UserInternal) -> DevicePairModel:
         if user.is_device or not device.is_device:
-            raise InvalidUserDeviceHTTPException(status_code=HTTPStatus.BAD_REQUEST, message="Unable to pair devices: Invalid user or device specified")
+            raise InvalidUserDeviceHTTPException(status_code=HTTPStatus.BAD_REQUEST,
+                message="Unable to pair devices: Invalid user or device specified")
 
         if await self.get_owner(device_id=device.id):
-            raise DeviceAlreadyHasOwnerHTTPException(status_code=HTTPStatus.BAD_REQUEST, message="This device already has owner, so is cannot be paired with any other user")
+            raise DeviceAlreadyHasOwnerHTTPException(status_code=HTTPStatus.BAD_REQUEST,
+                message="This device already has owner, so is cannot be paired with any other user")
 
         device_pair = DevicePairModel(user_id=user.id, device_id=device.id)  # type: ignore
         await self.save(device_pair)

@@ -1,9 +1,10 @@
 from datetime import datetime
+from typing import Union
 
 from pydantic import field_validator
 
 from src.core.db import BaseSchema
-from src.main.components.auth.models.user import UserInternal
+from src.main.components.auth.models.user import UserInternal, UserModel
 
 
 class DevicePair(BaseSchema):
@@ -13,17 +14,19 @@ class DevicePair(BaseSchema):
     created_at: datetime
 
     # noinspection PyNestedDecorators
-    @field_validator('user')
+    @field_validator('user', mode="before")
     @classmethod
-    def validate_user(cls, user: UserInternal) -> UserInternal:
-        if user.is_device:
+    def validate_user(cls, user: Union[UserModel, UserInternal]) -> UserInternal:
+        user_internal = user.to_schema(UserInternal) if isinstance(user, UserModel) else user
+        if user_internal.is_device:
             raise ValueError(f"Only user (user with is_device=False) can be used for `user` field in {cls.__name__}")
-        return user
+        return user_internal
 
     # noinspection PyNestedDecorators
-    @field_validator('device')
+    @field_validator('device', mode="before")
     @classmethod
-    def validate_device(cls, user: UserInternal) -> UserInternal:
-        if not user.is_device:
+    def validate_device(cls, user: Union[UserModel, UserInternal]) -> UserInternal:
+        user_internal = user.to_schema(UserInternal) if isinstance(user, UserModel) else user
+        if not user_internal.is_device:
             raise ValueError(f"Only device (user with is_device=True) can be used for `device` field in {cls.__name__}")
-        return user
+        return user_internal
