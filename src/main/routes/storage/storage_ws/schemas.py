@@ -16,7 +16,7 @@ class StorageRequest(BaseSchema):
     request_type: StorageRequestType
     message_id: str
     target_user_id: int
-    data: Optional[JsonDict] = None
+    data: JsonDict
 
     # noinspection PyNestedDecorators
     @field_validator('request_type', mode="before")

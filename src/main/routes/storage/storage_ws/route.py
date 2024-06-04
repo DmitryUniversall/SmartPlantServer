@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Optional
 
 from fastapi import Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -23,7 +22,7 @@ _jwt_auth = WSJWTBearerAuthDependency()  # FIXME: Always respond 403 when there 
 _storage_repository = StorageRepositoryST()
 
 
-async def _parse_storage_request(data: str) -> Optional[StorageRequest]:
+async def _parse_storage_request(data: str) -> StorageRequest:
     if (message := safe_json(data)) is None:
         raise InvalidStorageRequestHTTPException()
 
@@ -36,7 +35,7 @@ async def _parse_storage_request(data: str) -> Optional[StorageRequest]:
 async def _handle_recv_data(data: str, user: UserInternal) -> ApplicationJsonResponse:
     request = await _parse_storage_request(data)
 
-    await _storage_repository.send_data_message(
+    await _storage_repository.send_data_message(  # TODO: Response MUST BE valid ApplicationResponsePayload
         StorageDataMessage(
             data_type=DataMessageType.REQUEST if request.request_type == StorageRequestType.ENQUEUE_REQUEST else DataMessageType.RESPONSE,
             message_id=request.message_id,
@@ -55,6 +54,9 @@ async def _listen_task(websocket: WebSocket, user: UserInternal) -> None:
     try:
         # Sending data until access token is not expired; Then closing the connection
         async for schema in generator:
+            if schema is None:  # TODO: Use timeout to handle access_token expiration
+                continue
+
             await send_storage_data_message_ws(
                 websocket=websocket,
                 data=schema.to_json_dict(exclude="target_user_id")
@@ -82,7 +84,8 @@ async def storage_ws_route(websocket: WebSocket, user: UserInternal = Depends(_j
                 received = recv_task.result()
 
                 if received is not None and (received_data := received.get("text")) is not None:
-                    response = await _handle_recv_data(received_data, user)  # Hack (because I've already written generics for it)
+                    response = await _handle_recv_data(received_data,
+                        user)  # Hack (because I've already written generics for it)
                     await send_application_response_ws(websocket, payload=response.payload)
             if listen_task.done():
                 await listen_task  # Just to raise an error, if there is one
