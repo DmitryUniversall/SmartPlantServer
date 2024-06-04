@@ -92,6 +92,10 @@
                 "application_status_code": 4002,
                 "message": "This device already has owner"
             },
+            "CROSS_NETWORK_REQUEST": {
+                "application_status_code": 4003,
+                "message": "Cross-Network requests are not allowed"
+            },
             "PAIR_REQUEST_ACCEPTED": {
                 "application_status_code": 4401,
                 "message": "Pair request accepted"

@@ -16,6 +16,6 @@ class StorageDataMessage(BaseSchema):
     created_at: datetime = Field(default_factory=datetime.now)
     data_type: DataMessageType
     message_id: str
-    target_device_id: int
-    sender_device_id: int
+    target_user_id: int
+    sender_user_id: int
     data: JsonDict

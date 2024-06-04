@@ -49,3 +49,6 @@ class DevicesRepositoryST(metaclass=SingletonMeta):
 
     async def unpair(self, device_pair: DevicePair) -> None:
         await _device_pair_resource.delete_by_id(device_pair.id)
+
+    async def is_same_network(self, user_id_1: int, user_id_2: int) -> bool:
+        return await _device_pair_resource.is_same_network(user_id_1, user_id_2)

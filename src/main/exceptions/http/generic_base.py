@@ -17,7 +17,7 @@ class GenericApplicationHTTPException(ApplicationHTTPException, ABC):
         if payload is None:
             payload = self.get_default_response_payload(**payload_kwargs)
 
-        super().__init__(payload=payload,status_code=status_code, headers=headers)
+        super().__init__(payload=payload, status_code=status_code, headers=headers)
 
     @abstractmethod
     def get_default_response_payload(self, **payload_kwargs) -> ApplicationResponsePayload:

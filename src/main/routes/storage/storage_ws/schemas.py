@@ -15,7 +15,7 @@ class StorageRequestType(Enum):
 class StorageRequest(BaseSchema):
     request_type: StorageRequestType
     message_id: str
-    target_device_id: int
+    target_user_id: int
     data: Optional[JsonDict] = None
 
     # noinspection PyNestedDecorators

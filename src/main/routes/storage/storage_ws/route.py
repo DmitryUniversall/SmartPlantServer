@@ -25,7 +25,7 @@ _storage_repository = StorageRepositoryST()
 
 async def _parse_storage_request(data: str) -> Optional[StorageRequest]:
     if (message := safe_json(data)) is None:
-        raise InvalidStorageRequestHTTPException(status_code=0)
+        raise InvalidStorageRequestHTTPException()
 
     try:
         return StorageRequest(**message)
@@ -40,8 +40,8 @@ async def _handle_recv_data(data: str, user: UserInternal) -> ApplicationJsonRes
         StorageDataMessage(
             data_type=DataMessageType.REQUEST if request.request_type == StorageRequestType.ENQUEUE_REQUEST else DataMessageType.RESPONSE,
             message_id=request.message_id,
-            target_device_id=request.target_device_id,
-            sender_device_id=user.id,
+            target_user_id=request.target_user_id,
+            sender_user_id=user.id,
             data=request.data
         )
     )
@@ -57,7 +57,7 @@ async def _listen_task(websocket: WebSocket, user: UserInternal) -> None:
         async for schema in generator:
             await send_storage_data_message_ws(
                 websocket=websocket,
-                data=schema.to_json_dict(exclude="target_device_id")
+                data=schema.to_json_dict(exclude="target_user_id")
             )
     except WebSocketDisconnect:
         _logger.debug(f"Storage listener {user.id}: websocket disconnected")
