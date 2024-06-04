@@ -3,7 +3,7 @@ from src.main.models import ApplicationResponsePayload
 from .base import DeviceHTTPException
 
 
-class InvalidUserDeviceHTTPException(DeviceHTTPException):
+class InvalidUserOrDeviceHTTPException(DeviceHTTPException):
     def get_default_response_payload(self, **kwargs) -> ApplicationResponsePayload:
         return ApplicationResponsePayload(**{
             "ok": False,

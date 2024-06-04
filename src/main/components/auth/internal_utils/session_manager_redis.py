@@ -7,7 +7,7 @@ from src.main.redis import RedisClientManager
 
 class AuthSessionManagerRedisST(RedisClientManager, metaclass=SingletonMeta):
     def __init__(self) -> None:
-        super().__init__(db=project_settings.REDIS_DB_AUTH_SESSIONS)
+        super().__init__(db=project_settings.REDIS_DB_AUTH)
 
     def get_active_access_key(self, user_id: int) -> str:
         return f"auth:tokens:user:{user_id}:access_token_uuid:active"

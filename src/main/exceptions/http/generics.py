@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Optional
 
 from src.core.state import project_settings
 from src.main.models import ApplicationResponsePayload
@@ -39,3 +40,29 @@ class BadRequestHTTPException(GenericApplicationHTTPException):
             **project_settings.APPLICATION_STATUS_CODES.GENERIC_ERRORS.BAD_REQUEST,
             **payload_kwargs
         })
+
+
+class UnprocessableEntityHTTPException(GenericApplicationHTTPException):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs, status_code=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+    def get_default_response_payload(self, **payload_kwargs) -> ApplicationResponsePayload:
+        return ApplicationResponsePayload(**{
+            "ok": False,
+            **project_settings.APPLICATION_STATUS_CODES.GENERIC_ERRORS.UNPROCESSABLE_ENTITY,
+            **payload_kwargs
+        })
+
+
+class SchemaValidationHTTPException(UnprocessableEntityHTTPException):
+    def __init__(self, validation_error: Optional[Exception] = None, **kwargs) -> None:  # TODO: Better typing
+        self._validation_error: Optional[Exception] = validation_error
+        super().__init__(**kwargs)
+
+    def get_default_response_payload(self, **payload_kwargs) -> ApplicationResponsePayload:
+        payload = super().get_default_response_payload(**payload_kwargs)
+
+        if self._validation_error is not None:
+            payload.data = {"detail": [{"field": e["loc"][-1], "message": e["msg"]} for e in self._validation_error.errors()]}  # type: ignore
+
+        return payload

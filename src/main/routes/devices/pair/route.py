@@ -9,7 +9,7 @@ from src.core.utils.errors import supress_exception
 from src.main.components.auth.models.user import UserInternal, UserPublic
 from src.main.components.auth.repository import AuthRepositoryST
 from src.main.components.auth.utils.dependencies.http_auth import HTTPJWTBearerAuthDependency
-from src.main.components.devices.exceptions import InvalidUserDeviceHTTPException
+from src.main.components.devices.exceptions import InvalidUserOrDeviceHTTPException
 from src.main.components.devices.models.device_pair_request import DevicePairRequest, DevicePairReqeustState
 from src.main.components.devices.repository.devices_repository import DevicesRepositoryST
 from src.main.exceptions import fetch_or_404
@@ -39,7 +39,7 @@ async def pair_device_route(
             device_user = await _auth_repository.get_user_by_username(device_identifier)  # type: ignore
 
     if not device_user.is_device:
-        raise InvalidUserDeviceHTTPException(status_code=HTTPStatus.BAD_REQUEST, message="Specified device user is not device")
+        raise InvalidUserOrDeviceHTTPException(status_code=HTTPStatus.BAD_REQUEST, message="Specified device user is not device")
 
     request = DevicePairRequest(
         user=user,

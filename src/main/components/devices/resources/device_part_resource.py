@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from src.main.components.auth.models.user import UserInternal, UserModel
 from src.main.components.devices.exceptions.generics import (
-    InvalidUserDeviceHTTPException,
+    InvalidUserOrDeviceHTTPException,
     DeviceAlreadyHasOwnerHTTPException
 )
 from src.main.components.devices.models.device_pair import DevicePairModel
@@ -72,7 +72,7 @@ class DevicePairResourceST(BaseResource[DevicePairModel], metaclass=BaseResource
 
     async def create_device_pair(self, user: UserInternal, device: UserInternal) -> DevicePairModel:
         if user.is_device or not device.is_device:
-            raise InvalidUserDeviceHTTPException(status_code=HTTPStatus.BAD_REQUEST,
+            raise InvalidUserOrDeviceHTTPException(status_code=HTTPStatus.BAD_REQUEST,
                 message="Unable to pair devices: Invalid user or device specified")
 
         if await self.get_owner(device_id=device.id):

@@ -9,6 +9,7 @@ _contentT = TypeVar("_contentT")
 
 class ApplicationJsonResponse(JSONResponse):
     def __init__(self, *, content: ApplicationResponsePayload[_contentT], **kwargs) -> None:
+        self.payload = content
         super().__init__(content, **kwargs)
 
     def render(self, content: ApplicationResponsePayload[_contentT]) -> bytes:

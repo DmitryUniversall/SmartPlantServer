@@ -47,8 +47,8 @@ class RedisQueue(Generic[_schemaT]):
             data = await redis.blpop([self._key], timeout=timeout)  # type: ignore
             yield None if data is None else data[1]
 
-    async def _read_json(self, *, timeout: int = 0) -> AsyncGenerator[Optional[JsonDict], None]:
-        async for data in self.read_data(key, timeout=timeout):  # type: ignore
+    async def _read_json(self, **kwargs) -> AsyncGenerator[Optional[JsonDict], None]:
+        async for data in self._read_data(**kwargs):  # type: ignore
             yield None if data is None else json.loads(data)
 
     async def write_schema(self, schema: _schemaT, **kwargs) -> None:
@@ -57,6 +57,6 @@ class RedisQueue(Generic[_schemaT]):
 
         await self._write_data(schema.model_dump_json(**kwargs))
 
-    async def read_schema(self, *, timeout: int = 0, **kwargs) -> AsyncGenerator[Optional[_schemaT], None]:
-        async for data in self._read_json(timeout=timeout):
-            yield None if data is None else self._schema_cls.model_validate(data, **kwargs)
+    async def read_schema(self, **kwargs) -> AsyncGenerator[Optional[_schemaT], None]:
+        async for data in self._read_json(**kwargs):
+            yield None if data is None else self._schema_cls.model_validate(data)

@@ -4,5 +4,6 @@ from .utils import fetch_or_404
 from .generics import (
     NotFoundHTTPException,
     BadRequestHTTPException,
-    ForbiddenHTTPException
+    ForbiddenHTTPException,
+    SchemaValidationHTTPException
 )
