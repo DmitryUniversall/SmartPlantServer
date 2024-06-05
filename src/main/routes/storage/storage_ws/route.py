@@ -4,6 +4,7 @@ import logging
 from fastapi import Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from src.core.state import project_settings
 from src.core.utils.collections import for_each, safe_json
 from src.core.utils.websockets import ws_return_if_closed, is_websocket_connected
 from src.main.components.auth.models.user import UserInternal
@@ -13,6 +14,7 @@ from src.main.components.storage.models.storage_data_message import StorageDataM
 from src.main.components.storage.repository import StorageRepositoryST
 from src.main.exceptions import ApplicationHTTPException, SchemaValidationHTTPException
 from src.main.http import SuccessResponse, ApplicationJsonResponse
+from src.main.models import ApplicationResponsePayload
 from .schemas import StorageRequest, StorageRequestType
 from .utils import send_storage_data_message_ws, send_application_response_ws
 from ..router import storage_router
@@ -29,16 +31,28 @@ async def _parse_storage_request(data: str) -> StorageRequest:
     try:
         return StorageRequest(**message)
     except ValueError as error:
-        raise SchemaValidationHTTPException(validation_error=error)
+        raise SchemaValidationHTTPException(
+            validation_error=error,
+            **project_settings.APPLICATION_STATUS_CODES.STORAGE.INVALID_STORAGE_REQUEST,
+        )
 
 
 async def _handle_recv_data(data: str, user: UserInternal) -> ApplicationJsonResponse:
     request = await _parse_storage_request(data)
 
-    await _storage_repository.send_data_message(  # TODO: Response MUST BE valid ApplicationResponsePayload
+    if request.request_type == StorageRequestType.ENQUEUE_RESPONSE:
+        try:
+            ApplicationResponsePayload(**request.data)
+        except ValueError as error:
+            raise SchemaValidationHTTPException(
+                validation_error=error,
+                **project_settings.APPLICATION_STATUS_CODES.STORAGE.INVALID_RESPONSE_DATA_MESSAGE,
+            )
+
+    await _storage_repository.send_data_message(
         StorageDataMessage(
             data_type=DataMessageType.REQUEST if request.request_type == StorageRequestType.ENQUEUE_REQUEST else DataMessageType.RESPONSE,
-            message_id=request.message_id,
+            message_id=request.message_id,  # TODO: Handle unknown message_id
             target_user_id=request.target_user_id,
             sender_user_id=user.id,
             data=request.data
@@ -84,8 +98,8 @@ async def storage_ws_route(websocket: WebSocket, user: UserInternal = Depends(_j
                 received = recv_task.result()
 
                 if received is not None and (received_data := received.get("text")) is not None:
-                    response = await _handle_recv_data(received_data,
-                        user)  # Hack (because I've already written generics for it)
+                    # Hack (because I've already written generics for it)
+                    response = await _handle_recv_data(received_data, user)
                     await send_application_response_ws(websocket, payload=response.payload)
             if listen_task.done():
                 await listen_task  # Just to raise an error, if there is one

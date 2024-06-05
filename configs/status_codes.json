@@ -107,8 +107,12 @@
         },
         "STORAGE": {
             "INVALID_STORAGE_REQUEST": {
-                "application_status_code": 4002,
+                "application_status_code": 4001,
                 "message": "Invalid storage request"
+            },
+            "INVALID_RESPONSE_DATA_MESSAGE": {
+                "application_status_code": 4002,
+                "message": "Response-StorageDataMessage must be valid ApplicationResponsePayload"
             }
         }
     }
