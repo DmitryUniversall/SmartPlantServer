@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
+from typing import Union
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from src.core.db import BaseSchema
 from src.core.utils.types import JsonDict
@@ -13,9 +14,15 @@ class DataMessageType(Enum):
 
 
 class StorageDataMessage(BaseSchema):
-    created_at: datetime = Field(default_factory=datetime.now)
     data_type: DataMessageType
-    message_id: str
+    request_uuid: str
     target_user_id: int
     sender_user_id: int
+    created_at: datetime = Field(default_factory=datetime.now)
     data: JsonDict
+
+    # noinspection PyNestedDecorators
+    @field_validator('data_type', mode="before")
+    @classmethod
+    def set_token_type(cls, value: Union[str, DataMessageType]) -> DataMessageType:
+        return DataMessageType(value) if isinstance(value, str) else value

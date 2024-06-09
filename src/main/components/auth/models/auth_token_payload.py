@@ -14,7 +14,7 @@ class AuthTokenType(Enum):
 
 
 class AuthTokenPayload(BaseSchema):
-    uuid: str = Field(default_factory=lambda: uuid4().hex)
+    uuid: str = Field(default_factory=lambda: str(uuid4()))
     token_type: AuthTokenType
     exp: datetime
     user_id: int

@@ -4,62 +4,17 @@ import logging
 from fastapi import Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.core.state import project_settings
-from src.core.utils.collections import for_each, safe_json
+from src.core.utils.collections import for_each
 from src.core.utils.websockets import ws_return_if_closed, is_websocket_connected
 from src.main.components.auth.models.user import UserInternal
 from src.main.components.auth.utils.dependencies.ws_auth import WSJWTBearerAuthDependency
-from src.main.components.storage.exceptions import InvalidStorageRequestHTTPException
-from src.main.components.storage.models.storage_data_message import StorageDataMessage, DataMessageType
 from src.main.components.storage.repository import StorageRepositoryST
-from src.main.exceptions import ApplicationHTTPException, SchemaValidationHTTPException
-from src.main.http import SuccessResponse, ApplicationJsonResponse
-from src.main.models import ApplicationResponsePayload
-from .schemas import StorageRequest, StorageRequestType
-from .utils import send_storage_data_message_ws, send_application_response_ws
+from .utils import send_storage_data_message_ws
 from ..router import storage_router
 
 _logger = logging.getLogger(__name__)
 _jwt_auth = WSJWTBearerAuthDependency()  # FIXME: Always respond 403 when there is error with connection
 _storage_repository = StorageRepositoryST()
-
-
-async def _parse_storage_request(data: str) -> StorageRequest:
-    if (message := safe_json(data)) is None:
-        raise InvalidStorageRequestHTTPException()
-
-    try:
-        return StorageRequest(**message)
-    except ValueError as error:
-        raise SchemaValidationHTTPException(
-            validation_error=error,
-            **project_settings.APPLICATION_STATUS_CODES.STORAGE.INVALID_STORAGE_REQUEST,
-        )
-
-
-async def _handle_recv_data(data: str, user: UserInternal) -> ApplicationJsonResponse:
-    request = await _parse_storage_request(data)
-
-    if request.request_type == StorageRequestType.ENQUEUE_RESPONSE:
-        try:
-            ApplicationResponsePayload(**request.data)
-        except ValueError as error:
-            raise SchemaValidationHTTPException(
-                validation_error=error,
-                **project_settings.APPLICATION_STATUS_CODES.STORAGE.INVALID_RESPONSE_DATA_MESSAGE,
-            )
-
-    await _storage_repository.send_data_message(
-        StorageDataMessage(
-            data_type=DataMessageType.REQUEST if request.request_type == StorageRequestType.ENQUEUE_REQUEST else DataMessageType.RESPONSE,
-            message_id=request.message_id,  # TODO: Handle unknown message_id
-            target_user_id=request.target_user_id,
-            sender_user_id=user.id,
-            data=request.data
-        )
-    )
-
-    return SuccessResponse()
 
 
 async def _listen_task(websocket: WebSocket, user: UserInternal) -> None:
@@ -76,9 +31,9 @@ async def _listen_task(websocket: WebSocket, user: UserInternal) -> None:
                 data=schema.to_json_dict(exclude="target_user_id")
             )
     except WebSocketDisconnect:
-        _logger.debug(f"Storage listener {user.id}: websocket disconnected")
+        _logger.debug(f"Storage listener (user {user.id}): websocket disconnected")
     except asyncio.CancelledError:
-        _logger.debug(f"Storage listener {user.id}: task canceled")
+        _logger.debug(f"Storage listener (user {user.id}): task canceled")
 
 
 @storage_router.websocket("/")
@@ -87,27 +42,17 @@ async def storage_ws_route(websocket: WebSocket, user: UserInternal = Depends(_j
     await websocket.accept()
 
     listen_task = asyncio.create_task(_listen_task(websocket, user))
-
     while is_websocket_connected(websocket):
-        recv_task = asyncio.create_task(websocket.receive())
-
-        done, pending = await asyncio.wait([listen_task, recv_task], return_when=asyncio.FIRST_COMPLETED)
+        receive_task = asyncio.create_task(websocket.receive_text())
+        done, pending = await asyncio.wait([listen_task, receive_task], return_when=asyncio.FIRST_COMPLETED)
 
         try:
-            if recv_task.done():
-                received = recv_task.result()
-
-                if received is not None and (received_data := received.get("text")) is not None:
-                    # Hack (because I've already written generics for it)
-                    response = await _handle_recv_data(received_data, user)
-                    await send_application_response_ws(websocket, payload=response.payload)
-            if listen_task.done():
-                await listen_task  # Just to raise an error, if there is one
-        except ApplicationHTTPException as error:  # Hack (because I've already written generics for it)
-            await send_application_response_ws(websocket, payload=error.payload)
+            await asyncio.gather(*done)
         except WebSocketDisconnect:
-            return
+            _logger.debug(f"Storage ws (user {user.id}) disconnected")
         except Exception as error:
-            _logger.warning(f"Got unknown error in storage ws: {error.__class__.__name__}: {error}")
             for_each(asyncio.Task.cancel, pending)
             raise error
+
+    if not listen_task.done():
+        listen_task.cancel()

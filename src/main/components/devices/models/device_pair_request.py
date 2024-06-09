@@ -16,7 +16,7 @@ class DevicePairReqeustState(Enum):
 
 class DevicePairRequest:
     def __init__(self, user: UserInternal, device: UserInternal) -> None:
-        self.uuid: str = uuid4().hex
+        self.uuid: str = str(uuid4())
         self.created_at: datetime = datetime.now()
         self.user = user
         self.device = device

@@ -355,7 +355,7 @@ def for_each(func: Callable, iterable: Iterable[Any]) -> None:
         :raise TypeError: If the provided argument is not iterable.
     """
 
-    map(func, iterable)
+    tuple(map(func, iterable))
 
 
 def safe_json(data: Union[str, bytes], **kwargs) -> Optional[Dict[str, Any]]:
