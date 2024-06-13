@@ -13,6 +13,10 @@
             "UPDATED": {
                 "application_status_code": 1002,
                 "message": "Updated"
+            },
+            "NOT_CHANGED": {
+                "application_status_code": 1003,
+                "message": "Not changed"
             }
         },
         "GENERIC_ERRORS": {
