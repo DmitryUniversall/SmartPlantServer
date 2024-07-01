@@ -25,12 +25,11 @@ async def _listen_task(websocket: WebSocket, user: UserInternal) -> None:
         async for schema in generator:
             if schema is None:  # TODO: Use timeout to handle access_token expiration
                 continue
-
             await send_storage_data_message_ws(
                 websocket=websocket,
                 data=schema.to_json_dict(exclude="target_user_id")
             )
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError):
         _logger.debug(f"Storage listener (user {user.id}): websocket disconnected")
     except asyncio.CancelledError:
         _logger.debug(f"Storage listener (user {user.id}): task canceled")
@@ -50,6 +49,9 @@ async def storage_ws_route(websocket: WebSocket, user: UserInternal = Depends(_j
             await asyncio.gather(*done)
         except WebSocketDisconnect:
             _logger.debug(f"Storage ws (user {user.id}) disconnected")
+        except OSError as error:
+            _logger.debug(f"Storage ws (user {user.id}) disconnected: {error.__class__.__name__}: {error}")
+            return  # TODO: Close WebSocket?
         except Exception as error:
             for_each(asyncio.Task.cancel, pending)
             raise error
