@@ -8,5 +8,5 @@ class UniqueConstraintFailed(StatementError):
 
 
 error_mapping: Dict[str, Type[StatementError]] = {
-    'unique constraint failed': UniqueConstraintFailed
+    'duplicate entry': UniqueConstraintFailed
 }
